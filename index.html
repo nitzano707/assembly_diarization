@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speaker Diarization with AssemblyAI</title>
+</head>
+<body>
+    <h2>Upload Audio File for Speaker Diarization</h2>
+    <input type="file" id="audioFile" accept="audio/*">
+    <button onclick="uploadAndAnalyze()">Upload and Analyze</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function uploadAndAnalyze() {
+            const fileInput = document.getElementById('audioFile');
+            if (!fileInput.files.length) {
+                alert('Please select an audio file.');
+                return;
+            }
+
+            const audioFile = fileInput.files[0];
+
+            // שלב 2: העלאת הקובץ לשירות אחסון (אפשר להשתמש ב-AssemblyAI או בפתרון אחר)
+            const uploadUrl = "https://api.assemblyai.com/v2/upload";
+            const headers = {
+                "Authorization": "be1668db81284f6ab3e30ae1a7ffac43" // יש להחליף במפתח ה-API שלך
+            };
+            
+            const formData = new FormData();
+            formData.append("file", audioFile);
+
+            try {
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: "POST",
+                    headers: headers,
+                    body: formData
+                });
+
+                const uploadResult = await uploadResponse.json();
+                const audioUrl = uploadResult.upload_url;
+
+                // שלב 3: שליחת הבקשה לטרנסקריפציה עם זיהוי דוברים
+                const transcriptUrl = "https://api.assemblyai.com/v2/transcript";
+                const transcriptData = {
+                    "audio_url": audioUrl,
+                    "speaker_labels": true
+                };
+
+                const transcriptResponse = await fetch(transcriptUrl, {
+                    method: "POST",
+                    headers: {
+                        ...headers,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(transcriptData)
+                });
+
+                const transcriptResult = await transcriptResponse.json();
+                const resultElement = document.getElementById("result");
+                resultElement.textContent = JSON.stringify(transcriptResult, null, 2);
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred during the process.");
+            }
+        }
+    </script>
+</body>
+</html>
