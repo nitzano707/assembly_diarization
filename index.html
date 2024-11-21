@@ -24,6 +24,8 @@
             const audioFile = fileInput.files[0];
 
             try {
+                console.log("Starting upload process...");
+
                 // שלב 1: העלאת הקובץ לשירות האחסון של AssemblyAI
                 const uploadUrl = "https://api.assemblyai.com/v2/upload";
                 const headers = {
@@ -39,14 +41,17 @@
                     body: formData
                 });
 
+                console.log("Upload response status:", uploadResponse.status);
                 if (!uploadResponse.ok) {
                     throw new Error('Failed to upload audio file.');
                 }
 
                 const uploadResult = await uploadResponse.json();
+                console.log("Upload result:", uploadResult);
                 const audioUrl = uploadResult.upload_url;
 
                 // שלב 2: שליחת הבקשה לטרנסקריפציה עם זיהוי דוברים
+                console.log("Starting transcription request...");
                 const transcriptUrl = "https://api.assemblyai.com/v2/transcript";
                 const transcriptData = {
                     "audio_url": audioUrl,
@@ -63,11 +68,15 @@
                     body: JSON.stringify(transcriptData)
                 });
 
+                console.log("Transcription response status:", transcriptResponse.status);
                 if (!transcriptResponse.ok) {
+                    const errorResult = await transcriptResponse.json();
+                    console.error("Transcription error result:", errorResult);
                     throw new Error('Failed to request transcription.');
                 }
 
                 const transcriptResult = await transcriptResponse.json();
+                console.log("Transcription result:", transcriptResult);
                 const transcriptId = transcriptResult.id;
 
                 if (!transcriptId) {
@@ -90,11 +99,16 @@
             };
 
             while (true) {
+                console.log("Checking transcription status for ID:", transcriptId);
                 const response = await fetch(url, {
                     method: "GET",
                     headers: headers
                 });
+
+                console.log("Status check response status:", response.status);
                 const result = await response.json();
+                console.log("Status check result:", result);
+
                 const resultElement = document.getElementById("result");
                 
                 if (result.status === "completed") {
@@ -113,6 +127,7 @@
                     break;
                 } else {
                     // המתן 5 שניות לפני בדיקה חוזרת
+                    console.log("Transcription still in progress...");
                     await new Promise(resolve => setTimeout(resolve, 5000));
                 }
             }
