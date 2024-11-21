@@ -12,6 +12,8 @@
     <pre id="result"></pre>
 
     <script>
+        const apiKey = "be1668db81284f6ab3e30ae1a7ffac43";
+
         async function uploadAndAnalyze() {
             const fileInput = document.getElementById('audioFile');
             if (!fileInput.files.length) {
@@ -21,16 +23,16 @@
 
             const audioFile = fileInput.files[0];
 
-            // שלב 2: העלאת הקובץ לשירות אחסון (אפשר להשתמש ב-AssemblyAI או בפתרון אחר)
-            const uploadUrl = "https://api.assemblyai.com/v2/upload";
-            const headers = {
-                "Authorization": "be1668db81284f6ab3e30ae1a7ffac43" // יש להחליף במפתח ה-API שלך
-            };
-            
-            const formData = new FormData();
-            formData.append("file", audioFile);
-
             try {
+                // שלב 1: העלאת הקובץ לשירות האחסון של AssemblyAI
+                const uploadUrl = "https://api.assemblyai.com/v2/upload";
+                const headers = {
+                    "Authorization": apiKey
+                };
+                
+                const formData = new FormData();
+                formData.append("file", audioFile);
+
                 const uploadResponse = await fetch(uploadUrl, {
                     method: "POST",
                     headers: headers,
@@ -40,7 +42,7 @@
                 const uploadResult = await uploadResponse.json();
                 const audioUrl = uploadResult.upload_url;
 
-                // שלב 3: שליחת הבקשה לטרנסקריפציה עם זיהוי דוברים
+                // שלב 2: שליחת הבקשה לטרנסקריפציה עם זיהוי דוברים
                 const transcriptUrl = "https://api.assemblyai.com/v2/transcript";
                 const transcriptData = {
                     "audio_url": audioUrl,
@@ -50,18 +52,49 @@
                 const transcriptResponse = await fetch(transcriptUrl, {
                     method: "POST",
                     headers: {
-                        ...headers,
+                        "Authorization": apiKey,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(transcriptData)
                 });
 
                 const transcriptResult = await transcriptResponse.json();
-                const resultElement = document.getElementById("result");
-                resultElement.textContent = JSON.stringify(transcriptResult, null, 2);
+                const transcriptId = transcriptResult.id;
+
+                // שלב 3: בדיקת הסטטוס עד שהטרנסקריפציה תושלם
+                await checkStatus(transcriptId);
+
             } catch (error) {
                 console.error("Error:", error);
                 alert("An error occurred during the process.");
+            }
+        }
+
+        async function checkStatus(transcriptId) {
+            const url = `https://api.assemblyai.com/v2/transcript/${transcriptId}`;
+            const headers = {
+                "Authorization": apiKey
+            };
+
+            while (true) {
+                const response = await fetch(url, {
+                    method: "GET",
+                    headers: headers
+                });
+                const result = await response.json();
+                const resultElement = document.getElementById("result");
+                resultElement.textContent = JSON.stringify(result, null, 2);
+
+                if (result.status === "completed") {
+                    alert("Transcription completed!");
+                    break;
+                } else if (result.status === "failed") {
+                    alert("Transcription failed. Please try again.");
+                    break;
+                } else {
+                    // המתן 5 שניות לפני בדיקה חוזרת
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
             }
         }
     </script>
