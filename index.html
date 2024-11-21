@@ -46,7 +46,8 @@
                 const transcriptUrl = "https://api.assemblyai.com/v2/transcript";
                 const transcriptData = {
                     "audio_url": audioUrl,
-                    "speaker_labels": true
+                    "speaker_labels": true,
+                    "language_code": "he" // הגדרת השפה לעברית
                 };
 
                 const transcriptResponse = await fetch(transcriptUrl, {
@@ -83,9 +84,16 @@
                 });
                 const result = await response.json();
                 const resultElement = document.getElementById("result");
-                resultElement.textContent = JSON.stringify(result, null, 2);
-
+                
                 if (result.status === "completed") {
+                    if (result.words && result.words.length > 0) {
+                        const speakerSegments = result.words.map(word => {
+                            return `Speaker ${word.speaker}: ${word.start} - ${word.end}`;
+                        }).join("\n");
+                        resultElement.textContent = speakerSegments;
+                    } else {
+                        resultElement.textContent = "No transcription text or speaker data available.";
+                    }
                     alert("Transcription completed!");
                     break;
                 } else if (result.status === "failed") {
