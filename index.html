@@ -39,6 +39,10 @@
                     body: formData
                 });
 
+                if (!uploadResponse.ok) {
+                    throw new Error('Failed to upload audio file.');
+                }
+
                 const uploadResult = await uploadResponse.json();
                 const audioUrl = uploadResult.upload_url;
 
@@ -59,15 +63,23 @@
                     body: JSON.stringify(transcriptData)
                 });
 
+                if (!transcriptResponse.ok) {
+                    throw new Error('Failed to request transcription.');
+                }
+
                 const transcriptResult = await transcriptResponse.json();
                 const transcriptId = transcriptResult.id;
+
+                if (!transcriptId) {
+                    throw new Error('Failed to get transcript ID.');
+                }
 
                 // שלב 3: בדיקת הסטטוס עד שהטרנסקריפציה תושלם
                 await checkStatus(transcriptId);
 
             } catch (error) {
                 console.error("Error:", error);
-                alert("An error occurred during the process.");
+                alert(`An error occurred: ${error.message}`);
             }
         }
 
